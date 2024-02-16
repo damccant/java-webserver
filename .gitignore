@@ -1,0 +1,7 @@
+build/
+*.class
+*.jar
+
+# ignore macOS files
+.DS_Store
+._*

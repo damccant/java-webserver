@@ -1,0 +1,235 @@
+<section id="featured" class="">
+	<div class="cta-text">
+		<span>
+			<b style="font-size: 36px; color:#656565;">Snake</b>
+			<i id="score" style="margin-left: 30px">Score: 0</i>
+		</span>
+	</div>
+	<!-- end slider container -->
+</section>
+
+<section id="content">
+	<div class="container">
+		<div class="row fadeInUpBig">
+			<div class="col-lg-12" style="text-align: center;">
+				<script>
+				var canvas;
+				var e_score;
+				var rows = 15;
+				var cols = 15;
+				var xbox;
+				var ybox;
+				var ctx;
+				var grd;
+				var snek;
+				var interval = 200;
+				var downPos = { clientX:0, clientY:0 };
+				var upPos = { clientX:0, clientY:0 };
+				function resize_game()
+				{
+					canvas.width = Math.min(window.innerWidth, window.innerHeight * 1 / 2);
+					canvas.height = canvas.width;
+					grd = ctx.createLinearGradient(0, 0, canvas.width, 0);
+					grd.addColorStop(0, '#1a1a1a'); // Daifuku grey
+					grd.addColorStop(1, 'white');
+					xbox = canvas.width / rows;
+					ybox = canvas.height / rows;
+				}
+				function load_stage2()
+				{
+					canvas = document.getElementById("game");
+					e_score = document.getElementById("score");
+					ctx = canvas.getContext("2d");
+					resize_game();
+					snek = new snake();
+					fuit = new fruit();
+					fuit.locate();
+					document.body.addEventListener("mousedown", function(e) {
+						downPos = e;
+					}, false);
+					document.body.addEventListener("touchstart", function(e) {
+						downPos = e.touches[0];
+					}, false);
+					handleMouseUp = function(e) {
+						if(Math.abs(e.clientX - downPos.clientX) >= Math.abs(e.clientY - downPos.clientY))
+						{
+							// horizontal swipe
+							if(Math.abs(e.clientX - downPos.clientX) < 10)
+								; // swiped less than 10 pixels, so probably accidental tap 
+							else if(e.clientX > downPos.clientX)
+								snek.queueMove('ArrowRight');
+							else
+								snek.queueMove('ArrowLeft');
+						}
+						else
+						{
+							// vertical swipe
+							if(Math.abs(e.clientY - downPos.clientY) < 10)
+								; // swiped less than 10 pixels, so probably accidental tap
+							else if(e.clientY > downPos.clientY)
+								snek.queueMove('ArrowDown');
+							else
+								snek.queueMove('ArrowUp');
+						}
+						e.preventDefault();
+					};
+					document.body.addEventListener("touchmove", function(e) {
+						upPos = e.touches[0];
+						e.preventDefault();
+					}, false);
+					handleTouchUpWrapper = function(touchEvent) {
+						upPos.preventDefault = function () {};
+						handleMouseUp(upPos);
+					};
+					document.body.addEventListener("mouseup", handleMouseUp, false);
+					document.body.addEventListener("touchend", handleTouchUpWrapper, false);
+					myInterval = window.setTimeout(frame, interval);
+					window.addEventListener('keydown', function (event) {
+						snek.queueMove(event.key);
+					});
+				}
+				function frame()
+				{
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
+					ctx.fillStyle = grd;
+					ctx.fillRect(0, 0, canvas.width, canvas.height);
+					snek.move();
+					snek.draw();
+					fuit.draw();
+					if(snek.eat(fuit))
+					{
+						fuit.locate();
+						interval -= 5;
+					}
+					e_score.innerText = "Score: " + snek.score;
+					if(snek.collision())
+					{
+						ctx.fillStyle = "black";
+						ctx.textAlign = "center";
+						ctx.font = "60px serif";
+						ctx.fillText("You Lost!", canvas.width / 2, canvas.height / 2 + 30,canvas.width); 
+					}
+					else
+						setTimeout(frame, interval);
+				}		
+				function snake()
+				{
+					this.x = Math.floor(cols / 2);
+					this.y = Math.floor(rows / 2);
+					this.xvel = 0;
+					this.yvel = 0;
+					this.score = 0;
+					this.tail = [];
+					this.moves = [];
+					this.draw = function () {
+						ctx.fillStyle = "#51489d"; // Daifuku purple
+						for(let i=0; i<this.tail.length;i++)
+						{
+							if(i + 1 < this.tail.length)
+								nextthing = this.tail[i+1];
+							else
+								nextthing = this;
+							sx = Math.min(this.tail[i].x * xbox + xbox * 1/4, nextthing.x * xbox + xbox * 1/4);
+							bx = Math.max(this.tail[i].x * xbox + xbox * 3/4, nextthing.x * xbox + xbox * 3/4);
+							sy = Math.min(this.tail[i].y * ybox + ybox * 1/4, nextthing.y * ybox + ybox * 1/4);
+							by = Math.max(this.tail[i].y * ybox + ybox * 3/4, nextthing.y * ybox + ybox * 3/4);
+							ctx.fillRect(sx, sy, bx - sx, by - sy);
+						}
+						ctx.fillRect(this.x * xbox + xbox * 1/4, this.y * ybox + ybox * 1/4, xbox * 1/2, ybox * 1/2);
+					};
+					this.move = function () {
+						for(let i=0;i<this.tail.length-1;i++)
+							this.tail[i]=this.tail[i+1];
+						this.tail[this.score - 1] = {x:this.x, y:this.y};
+						if(this.moves.length > 0)
+						{
+							switch(this.moves.shift()) {
+								case "ArrowRight":
+									if(this.xvel >= 0)
+									{
+										this.xvel = 1;
+										this.yvel = 0;
+									}
+									break;
+								case "ArrowLeft":
+									if(this.xvel <= 0)
+									{
+										this.xvel = -1;
+										this.yvel = 0;
+									}
+									break;
+								case "ArrowUp":
+									if(this.yvel <= 0)
+									{
+										this.xvel = 0;
+										this.yvel = -1;
+									}
+									break;
+								case "ArrowDown":
+									if(this.yvel >= 0)
+									{
+										this.xvel = 0;
+										this.yvel = 1;
+									}
+									break;
+							}
+						}
+						this.x += this.xvel;
+						this.y += this.yvel;
+						// uncomment this to wrap around screen
+						/*if(this.x >= cols)
+							this.x = 0;
+						else if(this.x < 0)
+							this.x = (cols - 1);
+						if(this.y >= rows)
+							this.y = 0;
+						else if(this.y < 0)
+							this.y = (rows - 1);*/
+					};
+					this.queueMove = function(dir) {
+						this.moves.push(dir);	
+					};
+					this.eat = function(fruity) {
+						if(this.x == fruity.x && this.y == fruity.y)
+						{
+							this.score++;
+							return true;
+						}
+						return false;
+					};
+					this.collision = function () {
+						if(this.x >= cols || this.x < 0)
+							return true;
+						if(this.y >= rows || this.y < 0)
+							return true;
+						for(let i=0;i<this.tail.length;i++)
+						{
+							if(this.x == this.tail[i].x && this.y == this.tail[i].y)
+							{
+								return true;
+							}
+						}
+						return false;
+					};
+				}
+				function fruit()
+				{
+					this.x;
+					this.y;
+					this.locate = function () {
+						this.x = (Math.floor(Math.random() * cols-1) + 1);
+						this.y = (Math.floor(Math.random() * rows-1) + 1);
+					};
+					this.draw = function() {
+						ctx.fillStyle = "red";
+						ctx.fillRect(this.x * xbox, this.y * xbox, xbox, ybox);
+					};
+				}
+				</script>
+				<canvas id="game" width="0" height="0" onload="snek_init()"></canvas>
+				<br>
+				<a href="/">Get back to work!</a>
+			</div>
+		</div>
+	</div>
+</section>
