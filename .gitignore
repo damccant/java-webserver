@@ -1,6 +1,6 @@
 build/
 *.class
-*.jar
+webserver.jar
 
 # ignore macOS files
 .DS_Store
